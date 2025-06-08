@@ -186,7 +186,7 @@ async def codereview(data: PRRequest):
         raise HTTPException(status_code=500, detail="GITHUB_TOKEN não configurado no ambiente.")
 
     # Verificar configuração do AWS Bedrock
-    region = "us-west-2"
+    region = os.getenv("AWS_BEDROCK_REGION", "us-west-2")
     access_key = os.getenv("AWS_BEDROCK_ACCESS_KEY")
     secret_key = os.getenv("AWS_BEDROCK_SECRET_KEY")
 
@@ -248,7 +248,7 @@ async def finops_gpt(data: FinOpsRequest):
     """
     Endpoint FinOpsGPT: recebe uma pergunta, busca dados AWS (Cost Explorer, CloudWatch), monta prompt, chama Bedrock e retorna resposta e tipo.
     """
-    region = os.getenv("AWS_BEDROCK_REGION")
+    region = os.getenv("AWS_BEDROCK_REGION", "us-west-2")
     access_key = os.getenv("AWS_BEDROCK_ACCESS_KEY")
     secret_key = os.getenv("AWS_BEDROCK_SECRET_KEY")
     logging.info(f"AWS_BEDROCK_REGION: {region}")

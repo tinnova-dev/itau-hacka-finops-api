@@ -55,7 +55,7 @@ make run
 Para o funcionamento completo da API, configure as seguintes variáveis de ambiente no arquivo `.env`:
 
 - **AWS Bedrock (Obrigatório para endpoints FinOpsGPT e Code Review)**:
-  - `AWS_BEDROCK_REGION`: Região da AWS (ex: us-east-1)
+  - `AWS_BEDROCK_REGION`: Região da AWS (ex: us-west-2)
   - `AWS_BEDROCK_ACCESS_KEY`: Chave de acesso da AWS (não necessário se estiver usando papel de tarefa ECS)
   - `AWS_BEDROCK_SECRET_KEY`: Chave secreta da AWS (não necessário se estiver usando papel de tarefa ECS)
 
