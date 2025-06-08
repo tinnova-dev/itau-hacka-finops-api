@@ -1,0 +1,32 @@
+fastapi
+uvicorn[standard]
+pydantic
+boto3
+PyGithub
+requests
+
+# Dependências para IA/ML (exemplos, descomente e adicione conforme necessário)
+# pandas
+# numpy
+# scikit-learn
+# tensorflow
+# torch
+# langchain
+# sentence-transformers
+# accelerate
+# bitsandbytes
+# librosa
+# soundfile
+# faiss-cpu
+# tabpfn
+# tsai
+
+# Para desenvolvimento (linters, formatadores)
+# black
+# flake8
+# mypy 
+
+# openai
+# groq
+# transformers
+# huggingface-hub
