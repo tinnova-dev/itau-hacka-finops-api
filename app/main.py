@@ -194,7 +194,7 @@ async def codereview(data: PRRequest):
     if is_running_in_ecs():
         logging.info("Rodando em ECS, usando papel de tarefa para autenticação AWS")
         if not region:
-            logging.error("Variável de ambiente ausente: AWS_BEDROCK_REGION")
+            logging.error("Variável de ambiente ausente: us-west-2 AWS_BEDROCK_REGION")
             raise HTTPException(status_code=500, detail="AWS Bedrock não configurado: região não especificada.")
     # Se não estamos em ECS, precisamos de todas as credenciais
     elif not (region and access_key and secret_key):
