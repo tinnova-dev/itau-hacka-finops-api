@@ -186,7 +186,7 @@ async def codereview(data: PRRequest):
         raise HTTPException(status_code=500, detail="GITHUB_TOKEN não configurado no ambiente.")
 
     # Verificar configuração do AWS Bedrock
-    region = os.getenv("AWS_BEDROCK_REGION")
+    region = "us-west-2"
     access_key = os.getenv("AWS_BEDROCK_ACCESS_KEY")
     secret_key = os.getenv("AWS_BEDROCK_SECRET_KEY")
 
