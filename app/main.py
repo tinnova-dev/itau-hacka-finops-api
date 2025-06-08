@@ -70,15 +70,31 @@ class AIResponse(BaseModel):
 # Defina o modelId como constante
 BEDROCK_MODEL_ID = "anthropic.claude-3-5-sonnet-20241022-v2:0"
 
+# Função para verificar se estamos rodando em ECS
+def is_running_in_ecs():
+    # No ECS, a variável de ambiente AWS_CONTAINER_CREDENTIALS_RELATIVE_URI estará definida
+    return os.getenv('AWS_CONTAINER_CREDENTIALS_RELATIVE_URI') is not None
+
 # Função auxiliar para invocar o modelo Bedrock
-def invoke_bedrock_model(prompt, region, access_key, secret_key):
+def invoke_bedrock_model(prompt, region, access_key=None, secret_key=None):
     logging.info(f"Invocando Bedrock modelId={BEDROCK_MODEL_ID}")
-    bedrock = boto3.client(
-        service_name="bedrock-runtime",
-        region_name=region,
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key
-    )
+
+    # Se estamos rodando em ECS, usamos o papel de tarefa ECS
+    if is_running_in_ecs():
+        logging.info("Usando papel de tarefa ECS para autenticação AWS")
+        bedrock = boto3.client(
+            service_name="bedrock-runtime",
+            region_name=region
+        )
+    else:
+        # Caso contrário, usamos as credenciais explícitas
+        logging.info("Usando credenciais explícitas para autenticação AWS")
+        bedrock = boto3.client(
+            service_name="bedrock-runtime",
+            region_name=region,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key
+        )
     body = {
         "messages": [
             {"role": "user", "content": prompt}
@@ -168,6 +184,30 @@ async def codereview(data: PRRequest):
     github_token = os.getenv("GITHUB_TOKEN")
     if not github_token:
         raise HTTPException(status_code=500, detail="GITHUB_TOKEN não configurado no ambiente.")
+
+    # Verificar configuração do AWS Bedrock
+    region = os.getenv("AWS_BEDROCK_REGION")
+    access_key = os.getenv("AWS_BEDROCK_ACCESS_KEY")
+    secret_key = os.getenv("AWS_BEDROCK_SECRET_KEY")
+
+    # Se estamos rodando em ECS, só precisamos da região
+    if is_running_in_ecs():
+        logging.info("Rodando em ECS, usando papel de tarefa para autenticação AWS")
+        if not region:
+            logging.error("Variável de ambiente ausente: AWS_BEDROCK_REGION")
+            raise HTTPException(status_code=500, detail="AWS Bedrock não configurado: região não especificada.")
+    # Se não estamos em ECS, precisamos de todas as credenciais
+    elif not (region and access_key and secret_key):
+        missing = []
+        if not region:
+            missing.append('AWS_BEDROCK_REGION')
+        if not access_key:
+            missing.append('AWS_BEDROCK_ACCESS_KEY')
+        if not secret_key:
+            missing.append('AWS_BEDROCK_SECRET_KEY')
+        logging.error(f"Variáveis de ambiente ausentes: {', '.join(missing)}")
+        raise HTTPException(status_code=500, detail="AWS Bedrock não configurado.")
+
     # Buscar diff da PR
     try:
         g = Github(github_token)
@@ -214,7 +254,15 @@ async def finops_gpt(data: FinOpsRequest):
     logging.info(f"AWS_BEDROCK_REGION: {region}")
     logging.info(f"AWS_BEDROCK_ACCESS_KEY: {'SET' if access_key else 'NOT SET'}")
     logging.info(f"AWS_BEDROCK_SECRET_KEY: {'SET' if secret_key else 'NOT SET'}")
-    if not (region and access_key and secret_key):
+
+    # Se estamos rodando em ECS, só precisamos da região
+    if is_running_in_ecs():
+        logging.info("Rodando em ECS, usando papel de tarefa para autenticação AWS")
+        if not region:
+            logging.error("Variável de ambiente ausente: AWS_BEDROCK_REGION")
+            raise HTTPException(status_code=500, detail="AWS Bedrock não configurado: região não especificada.")
+    # Se não estamos em ECS, precisamos de todas as credenciais
+    elif not (region and access_key and secret_key):
         missing = []
         if not region:
             missing.append('AWS_BEDROCK_REGION')
@@ -225,12 +273,20 @@ async def finops_gpt(data: FinOpsRequest):
         logging.error(f"Variáveis de ambiente ausentes: {', '.join(missing)}")
         raise HTTPException(status_code=500, detail="AWS Bedrock não configurado.")
     # Inicializar boto3 para Cost Explorer e CloudWatch
-    ce = boto3.client(
-        'ce',
-        region_name=region,
-        aws_access_key_id=access_key,
-        aws_secret_access_key=secret_key
-    )
+    if is_running_in_ecs():
+        logging.info("Usando papel de tarefa ECS para autenticação AWS (Cost Explorer)")
+        ce = boto3.client(
+            'ce',
+            region_name=region
+        )
+    else:
+        logging.info("Usando credenciais explícitas para autenticação AWS (Cost Explorer)")
+        ce = boto3.client(
+            'ce',
+            region_name=region,
+            aws_access_key_id=access_key,
+            aws_secret_access_key=secret_key
+        )
     # 1. Custo total do mês
     try:
         today = date.today()
@@ -274,7 +330,12 @@ async def finops_gpt(data: FinOpsRequest):
     # 3. Alertas CloudWatch em ALARM
     try:
         logging.info("Consultando CloudWatch (alarmes em ALARM)")
-        cw = boto3.client('cloudwatch', region_name=region, aws_access_key_id=access_key, aws_secret_access_key=secret_key)
+        if is_running_in_ecs():
+            logging.info("Usando papel de tarefa ECS para autenticação AWS (CloudWatch)")
+            cw = boto3.client('cloudwatch', region_name=region)
+        else:
+            logging.info("Usando credenciais explícitas para autenticação AWS (CloudWatch)")
+            cw = boto3.client('cloudwatch', region_name=region, aws_access_key_id=access_key, aws_secret_access_key=secret_key)
         alarms = cw.describe_alarms(StateValue='ALARM')
         alertas = [a['AlarmName'] for a in alarms.get('MetricAlarms', [])]
         alertas_str = ', '.join(alertas[:5]) if alertas else 'Nenhum alerta crítico recente'
@@ -448,4 +509,4 @@ if __name__ == "__main__":
     # Este bloco é útil para rodar localmente com `python app/main.py`
     # Para produção, use um servidor ASGI como Uvicorn ou Hypercorn diretamente.
     # Ex: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
-    uvicorn.run(app, host="0.0.0.0", port=8005) 
+    uvicorn.run(app, host="0.0.0.0", port=8005)

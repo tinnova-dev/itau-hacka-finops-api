@@ -43,9 +43,31 @@ backend-python/
 ./setup.sh
 # Ative o ambiente virtual
 source .venv/bin/activate
+# Configure as variáveis de ambiente (copie o arquivo .env.example para .env e preencha os valores)
+cp .env.example .env
+# Edite o arquivo .env com suas credenciais
 # Rode o servidor
 make run
 ```
+
+### Variáveis de Ambiente Necessárias
+
+Para o funcionamento completo da API, configure as seguintes variáveis de ambiente no arquivo `.env`:
+
+- **AWS Bedrock (Obrigatório para endpoints FinOpsGPT e Code Review)**:
+  - `AWS_BEDROCK_REGION`: Região da AWS (ex: us-east-1)
+  - `AWS_BEDROCK_ACCESS_KEY`: Chave de acesso da AWS (não necessário se estiver usando papel de tarefa ECS)
+  - `AWS_BEDROCK_SECRET_KEY`: Chave secreta da AWS (não necessário se estiver usando papel de tarefa ECS)
+
+> **Nota sobre ECS**: Quando executado em um ambiente ECS, a aplicação pode usar o papel de tarefa ECS para autenticação AWS, não sendo necessário fornecer as chaves de acesso e secreta. Apenas a região AWS ainda precisa ser configurada.
+
+- **GitHub (Obrigatório para endpoint Code Review)**:
+  - `GITHUB_TOKEN`: Token de acesso ao GitHub
+
+- **Outros Serviços (Opcionais)**:
+  - `OPENAI_API_KEY`: Chave da API OpenAI
+  - `GROQ_API_KEY`: Chave da API Groq
+  - `HF_TOKEN`: Token da Hugging Face
 
 ## 5. Como Baixar Modelos do HuggingFace Localmente
 
